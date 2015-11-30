@@ -66,7 +66,7 @@ def process_data():
 			cur.close()
 		except:
 			conn.rollback()
-			raise ApplicationError
+			raise SystemError
 
 		if (lat == row['latitude']) and (lon == row['longitude']):
 			log.info("Not updating as latitude and longitude have not been modified: " + lat + "," + lon)
@@ -83,7 +83,7 @@ def process_data():
 			conn.commit()
 		except Exception as e:
 			conn.rollback()
-			raise ApplicationError
+			raise SystemError
 
 		return "ok"
 
@@ -92,7 +92,7 @@ def process_data():
 		response.content_type = 'text/plain'
 		return 'Bad request'
 
-	except ApplicationError:
+	except SystemError:
 		response.status = 503
 		response.content_type = 'text/plain'
 		return 'Server error'
