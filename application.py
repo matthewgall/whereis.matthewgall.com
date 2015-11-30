@@ -12,7 +12,7 @@ import requests
 from urlparse import urlparse
 from bottle import route, request, response, error, default_app, view, static_file
 from logentries import LogentriesHandler
-import pprint as pprint
+import pprint
 
 @route('/public/css/<filename>')
 def css_static(filename):
@@ -124,9 +124,7 @@ def load_data():
 
 	# And return this data, and all lookups to the script
 	return dict(
-		town=locationData['address']['town'],
-		county=locationData['address']['county'],
-		country=locationData['address']['country'],
+		display_name=locationData['display_name'],
 		lat=row['latitude'],
 		lon=row['longitude'],
 		timestamp=row['timestamp']

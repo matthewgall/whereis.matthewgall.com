@@ -13,9 +13,7 @@
 <body>
 	<div id="map" class="dark"></div>
 	<div id="location">
-		<p>{{town}}</p>
-		<p>{{county}}</p>
-		<p>{{country}}</p>
+		<p>{{display_name}}</p>
 	</div>
 	<script>
 		L.mapbox.accessToken = 'pk.eyJ1IjoibWF0dGhld2dhbGwiLCJhIjoiY2lobTFpZnB1MDBlMHVza3FqNDcxcWJuOCJ9.ZXH7wvxQNQxOneG5vT_znA';
@@ -34,7 +32,7 @@
 				]
 			},
 			properties: {
-				title: '{{town}}, {{country}}',
+				title: '{{display_name}}',
 				description: 'Last Reported: {{timestamp}}',
 				// one can customize markers by adding simplestyle properties
 				// https://www.mapbox.com/guides/an-open-platform/#simplestyle
