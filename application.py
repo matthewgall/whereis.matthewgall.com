@@ -29,7 +29,7 @@ def error_404(error):
 def process_data():
 
 	# First, we'll verify the token provided in the request
-	if not request.headers.get('token') == os.getenv('APP_TOKEN', 'testtoken'):
+	if not (request.headers.get('token') == os.getenv('APP_TOKEN', 'testtoken')) or (request.get_cookie("token") == os.getenv('APP_TOKEN', 'testtoken')):
 		response.status = 403
 		response.content_type = 'text/plain'
 		return 'Forbidden'
