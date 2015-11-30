@@ -1,0 +1,25 @@
+body {
+	background: #f0f0f0;
+	font-family: Gafata,sans-serif;
+	color: #FFF;
+	margin:0;
+	padding:0;
+}
+
+p {
+	margin: 0;
+	padding: 0;
+}
+
+div#location {
+	position: fixed;
+	bottom: 0;
+	right: 0;
+	padding: 0 15px 30px 0;
+}
+
+#map { position:absolute; top:0; bottom:0; width:100%; z-index: -9999; }
+
+.fa-map-marker {
+	height: 128px;
+}
