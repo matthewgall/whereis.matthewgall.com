@@ -79,7 +79,7 @@ def process_data():
 				'INSERT INTO "checkins" (latitude, longitude) VALUES (%s, %s)',
 				(lat, lon)
 			)
-			log.info("Updated location to: " + lat + "," lon)
+			log.info("Updated location to: " + lat + "," + lon)
 			conn.commit()
 		except Exception as e:
 			conn.rollback()
