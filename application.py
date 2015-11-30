@@ -9,6 +9,7 @@ import time
 import psycopg2
 import psycopg2.extras
 import requests
+from datetime import datetime
 from urlparse import urlparse
 from bottle import route, request, response, error, default_app, view, static_file
 from logentries import LogentriesHandler
@@ -127,7 +128,7 @@ def load_data():
 		display_name=locationData['display_name'],
 		lat=row['latitude'],
 		lon=row['longitude'],
-		timestamp=row['timestamp']
+		timestamp=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
 	)
 
 if __name__ == '__main__':
