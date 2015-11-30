@@ -69,7 +69,7 @@ def process_data():
 			raise ApplicationError
 
 		if (lat == row['latitude']) and (lon == row['longitude']):
-			log.info("Not updating as latitude and longitude have not been modified: " + lat + "," lon)
+			log.info("Not updating as latitude and longitude have not been modified: " + lat + "," + lon)
 			return "Still here, ignoring."
 
 		## Finally, we can process the insertion
