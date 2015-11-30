@@ -76,7 +76,7 @@ def process_data():
 		try:
 			cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 			cur.execute(
-				'INSERT INTO "checkins" (latitude, longitude) VALUES (%s, %s, %s, %s)',
+				'INSERT INTO "checkins" (latitude, longitude) VALUES (%s, %s)',
 				(lat, lon)
 			)
 			log.info("Updated location to: " + lat + "," lon)
