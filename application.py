@@ -32,6 +32,7 @@ def process_data():
 	if not request.forms.get('token') == os.getenv('APP_TOKEN', 'testtoken'):
 		response.status = 403
 		response.content_type = 'text/plain'
+		log.info("Invalid token provided: " + request.forms.get('token'))
 		return 'Forbidden'
 
 	# Now the token is verified, we'll be gathering other data
@@ -64,9 +65,11 @@ def process_data():
 			row = cur.fetchone()
 			cur.close()
 		except:
+			conn.rollback()
 			raise ApplicationError
 
 		if (lat == row['latitude']) and (lon == row['longitude']):
+			log.info("Not updating as latitude and longitude have not been modified: " + lat + "," lon)
 			return "Still here, ignoring."
 
 		## Finally, we can process the insertion
@@ -76,10 +79,13 @@ def process_data():
 				'INSERT INTO "checkins" (latitude, longitude) VALUES (%s, %s, %s, %s)',
 				(lat, lon)
 			)
+			log.info("Updated location to: " + lat + "," lon)
 			conn.commit()
 		except Exception as e:
 			conn.rollback()
-			pass
+			raise ApplicationError
+
+		return "ok"
 
 	except ValueError:
 		response.status = 400
