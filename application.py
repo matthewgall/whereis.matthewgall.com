@@ -5,7 +5,7 @@ import os
 import json
 import socket
 import logging
-import datetime
+import time
 import psycopg2
 import psycopg2.extras
 import requests
@@ -76,8 +76,8 @@ def process_data():
 		try:
 			cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 			cur.execute(
-				'INSERT INTO "checkins" (latitude, longitude) VALUES (%s, %s)',
-				(lat, lon)
+				'INSERT INTO "checkins" (latitude, longitude, timestamp) VALUES (%s, %s, %s)',
+				(lat, lon, int(time.time()))
 			)
 			log.info("Updated location to: " + lat + "," + lon)
 			conn.commit()
