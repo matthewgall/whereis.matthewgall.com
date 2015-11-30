@@ -1,5 +1,9 @@
 FROM matthewgall/python-dev:latest
 
+RUN apk add --update \
+	postgresql \
+	postgresql-dev
+
 WORKDIR /app
 
 COPY . /app
