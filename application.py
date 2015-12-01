@@ -103,6 +103,40 @@ def process_data():
 		response.content_type = 'text/plain'
 		return 'Server error'
 
+@route('/api')
+@view('home')
+def api_data():
+
+	# First, we'll perform the select of the latest checkin
+	try:
+		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+		cur.execute('SELECT * FROM "checkins" ORDER BY id DESC')
+		row = cur.fetchone()
+		cur.close()
+	except Exception as e:
+		conn.rollback()
+		pass
+
+	# Now, we run a request against nominatim (a service provided by openstreetmap)
+	payload = {
+		'format': 'json',
+		'lat': row['latitude'],
+		'lon': row['longitude'],
+		'zoom': 10,
+		'addressdetails': 1
+	}
+	locationData = requests.get('http://nominatim.openstreetmap.org/reverse', params=payload)
+	locationData = locationData.json()
+
+	# And return this data, and all lookups to the script
+	response.content_type = 'application/json'
+	return json.dumps(dict(
+		displayname=locationData['display_name'],
+		lat=row['latitude'],
+		lon=row['longitude'],
+		timestamp=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
+	))
+
 @route('/')
 @view('home')
 def load_data():
