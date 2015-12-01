@@ -13,7 +13,7 @@ from datetime import datetime
 from urlparse import urlparse
 from bottle import route, request, response, error, default_app, view, static_file
 from logentries import LogentriesHandler
-import pprint
+from LatLon import LatLon
 
 @route('/public/css/<filename>')
 def css_static(filename):
@@ -69,9 +69,14 @@ def process_data():
 			conn.rollback()
 			raise SystemError
 
-		if (lat == row['latitude']) and (lon == row['longitude']):
-			log.info("Not updating as latitude and longitude have not been modified: " + lat + "," + lon)
-			return "Still here, ignoring."
+		oldLocation = LatLon(row['latitude'],row['longitude'])
+		newLocation = LatLon(lat, lon)
+		distance = newLocation.distance(oldLocation)
+
+		# If we have moved more than 200m, then we'll accept the movement
+		if distance > 0.1:
+			log.info("Not updating as latitude and longitude have not been modified by more than 100m: " + lat + "," + lon)
+			return "Updated lat/lon is less than 100m away from previous checkin, ignoring"
 
 		## Finally, we can process the insertion
 		try:
