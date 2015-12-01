@@ -74,7 +74,7 @@ def process_data():
 		distance = newLocation.distance(oldLocation)
 
 		# If we have moved more than 200m, then we'll accept the movement
-		if distance > 0.1:
+		if distance < 0.1:
 			log.info("Not updating as latitude and longitude have not been modified by more than 100m: " + lat + "," + lon)
 			return "Updated lat/lon is less than 100m away from previous checkin, ignoring"
 
