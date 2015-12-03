@@ -230,7 +230,7 @@ def load_data():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT latitude,longitude,timestamp FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT latitude,longitude,display_name,timestamp FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
 	except Exception as e:
