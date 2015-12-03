@@ -78,12 +78,23 @@ def process_data():
 			log.info("Not updating as latitude and longitude have not been modified by more than 100m: " + lat + "," + lon)
 			return "Updated lat/lon is less than 100m away from previous checkin, ignoring"
 
+		# Next, we'll do a display name lookup (to save the Nominatium API)
+		payload = {
+			'format': 'json',
+			'lat': lat,
+			'lon': lon,
+			'zoom': 10,
+			'addressdetails': 1
+		}
+		locationData = requests.get('http://nominatim.openstreetmap.org/reverse', params=payload)
+		locationData = locationData.json()
+
 		## Finally, we can process the insertion
 		try:
 			cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 			cur.execute(
-				'INSERT INTO "checkins" (latitude, longitude, timestamp) VALUES (%s, %s, %s)',
-				(lat, lon, int(time.time()))
+				'INSERT INTO "checkins" (latitude, longitude, display_name, timestamp) VALUES (%s, %s, %s, %s)',
+				(lat, lon, locationData['display_name'], int(time.time()))
 			)
 			log.info("Updated location to: " + lat + "," + lon)
 			conn.commit()
@@ -129,7 +140,7 @@ def api_history_json():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT latitude,longitude,timestamp FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT * FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchall()
 		cur.close()
 	except Exception as e:
@@ -142,6 +153,38 @@ def api_history_json():
 	}
 
 	for location in row:
+
+		# Now, if display_name is empty, we're going to populate it for this row
+		if location['display_name'] is None:
+
+			# Perform the lookup
+			payload = {
+				'format': 'json',
+				'lat': location['latitude'],
+				'lon': location['longitude'],
+				'zoom': 10,
+				'addressdetails': 1
+			}
+			locationData = requests.get('http://nominatim.openstreetmap.org/reverse', params=payload)
+			locationData = locationData.json()
+
+			# Now, we have the data, so we'll update the lookup
+			try:
+				cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+				cur.execute(
+					'UPDATE checkins SET display_name=%s WHERE id=%s', (locationData['display_name'], location['id'])
+				)
+				conn.commit()
+			except Exception as e:
+				conn.rollback()
+				pass
+
+			# Finally, as the change won't reflect until the next lookup, set the display_name variable
+			display_name = locationData['display_name']
+		else:
+			# Otherwise, we'll just set this variable
+			display_name = location['display_name']
+
 		body['features'].append(dict(
 			type="Feature",
 			geometry=dict(
@@ -149,6 +192,7 @@ def api_history_json():
 				coordinates=[float(location['longitude']),float(location['latitude'])]
 			),
 			properties=dict(
+				title=display_name,
 				description="<strong>Last seen at: </strong>" + datetime.fromtimestamp(location['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
 			)
 		))
@@ -163,7 +207,7 @@ def api_data():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT latitude,longitude,timestamp FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT latitude,longitude,display_name,timestamp FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
 	except Exception as e:
@@ -178,13 +222,11 @@ def api_data():
 		'zoom': 10,
 		'addressdetails': 1
 	}
-	locationData = requests.get('http://nominatim.openstreetmap.org/reverse', params=payload)
-	locationData = locationData.json()
 
 	# And return this data, and all lookups to the script
 	response.content_type = 'application/json'
 	return json.dumps(dict(
-		displayname=locationData['display_name'],
+		displayname=row['display_name'],
 		lat=row['latitude'],
 		lon=row['longitude'],
 		timestamp=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
