@@ -214,15 +214,6 @@ def api_data():
 		conn.rollback()
 		pass
 
-	# Now, we run a request against nominatim (a service provided by openstreetmap)
-	payload = {
-		'format': 'json',
-		'lat': row['latitude'],
-		'lon': row['longitude'],
-		'zoom': 10,
-		'addressdetails': 1
-	}
-
 	# And return this data, and all lookups to the script
 	response.content_type = 'application/json'
 	return json.dumps(dict(
@@ -246,20 +237,9 @@ def load_data():
 		conn.rollback()
 		pass
 
-	# Now, we run a request against nominatim (a service provided by openstreetmap)
-	payload = {
-		'format': 'json',
-		'lat': row['latitude'],
-		'lon': row['longitude'],
-		'zoom': 10,
-		'addressdetails': 1
-	}
-	locationData = requests.get('http://nominatim.openstreetmap.org/reverse', params=payload)
-	locationData = locationData.json()
-
 	# And return this data, and all lookups to the script
 	return dict(
-		display_name=locationData['display_name'],
+		display_name=row['display_name'],
 		lat=row['latitude'],
 		lon=row['longitude'],
 		timestamp=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
