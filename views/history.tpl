@@ -31,10 +31,10 @@
 
 		L.mapbox.accessToken = 'pk.eyJ1IjoibWF0dGhld2dhbGwiLCJhIjoiY2lobTFpZnB1MDBlMHVza3FqNDcxcWJuOCJ9.ZXH7wvxQNQxOneG5vT_znA';
 		var map = L.mapbox.map('map', 'mapbox.streets')
-			.setView([{{lat}}, {{lon}}], 11);
+			.setView([{{lat}}, {{lon}}], 6);
 
 		var featureLayer = L.mapbox.featureLayer()
-			.loadURL('/geo.json')
+			.loadURL('/history.json')
 			.addTo(map);
 
 	</script>

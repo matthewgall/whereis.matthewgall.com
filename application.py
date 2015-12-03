@@ -62,7 +62,7 @@ def process_data():
 		# that we haven't been here before
 		try:
 			cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-			cur.execute('SELECT * FROM "checkins" ORDER BY id DESC')
+			cur.execute('SELECT latitude,longitude FROM "checkins" ORDER BY id DESC')
 			row = cur.fetchone()
 			cur.close()
 		except:
@@ -110,7 +110,7 @@ def api_history():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT * FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT latitude,longitude FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
 	except Exception as e:
@@ -123,13 +123,13 @@ def api_history():
 		lon=row['longitude']
 	)
 
-@route('/geo.json')
-def api_json():
+@route('/history.json')
+def api_history_json():
 
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT latitude,longitude FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT latitude,longitude,timestamp FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchall()
 		cur.close()
 	except Exception as e:
@@ -148,7 +148,9 @@ def api_json():
 				type="Point",
 				coordinates=[float(location['longitude']),float(location['latitude'])]
 			),
-			properties=dict()
+			properties=dict(
+				description="<strong>Last seen at: </strong>" + datetime.fromtimestamp(location['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
+			)
 		))
 
 	# And return this data, and all lookups to the script
@@ -161,7 +163,7 @@ def api_data():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT * FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT latitude,longitude,timestamp FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
 	except Exception as e:
@@ -195,7 +197,7 @@ def load_data():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT * FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT latitude,longitude,timestamp FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
 	except Exception as e:
