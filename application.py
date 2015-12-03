@@ -83,7 +83,7 @@ def process_data():
 			'format': 'json',
 			'lat': lat,
 			'lon': lon,
-			'zoom': 10,
+			'zoom': 16,
 			'addressdetails': 1
 		}
 		locationData = requests.get('http://nominatim.openstreetmap.org/reverse', params=payload)
@@ -162,7 +162,7 @@ def api_history_json():
 				'format': 'json',
 				'lat': location['latitude'],
 				'lon': location['longitude'],
-				'zoom': 10,
+				'zoom': 16,
 				'addressdetails': 1
 			}
 			locationData = requests.get('http://nominatim.openstreetmap.org/reverse', params=payload)
