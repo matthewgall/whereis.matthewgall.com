@@ -103,8 +103,59 @@ def process_data():
 		response.content_type = 'text/plain'
 		return 'Server error'
 
+@route('/history')
+@view('history.tpl')
+def api_history():
+
+	# First, we'll perform the select of the latest checkin
+	try:
+		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+		cur.execute('SELECT * FROM "checkins" ORDER BY id DESC')
+		row = cur.fetchone()
+		cur.close()
+	except Exception as e:
+		conn.rollback()
+		pass
+
+	return dict(
+		display_name="History",
+		lat=row['latitude'],
+		lon=row['longitude']
+	)
+
+@route('/geo.json')
+def api_json():
+
+	# First, we'll perform the select of the latest checkin
+	try:
+		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+		cur.execute('SELECT latitude,longitude FROM "checkins" ORDER BY id DESC')
+		row = cur.fetchall()
+		cur.close()
+	except Exception as e:
+		conn.rollback()
+		pass
+
+	body = {
+		"type": "FeatureCollection",
+		"features": [],
+	}
+
+	for location in row:
+		body['features'].append(dict(
+			type="Feature",
+			geometry=dict(
+				type="Point",
+				coordinates=[float(location['longitude']),float(location['latitude'])]
+			),
+			properties=dict()
+		))
+
+	# And return this data, and all lookups to the script
+	response.content_type = 'application/json'
+	return json.dumps(body)
+
 @route('/api')
-@view('home')
 def api_data():
 
 	# First, we'll perform the select of the latest checkin
