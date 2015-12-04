@@ -12,23 +12,7 @@
 </head>
 <body>
 	<div id="map" class="dark"></div>
-	<div id="location">
-		<p id="displayName">{{display_name}}</p>
-	</div>
 	<script>
-		var HttpClient = function() {
-			this.get = function(aUrl, aCallback) {
-				var anHttpRequest = new XMLHttpRequest();
-				anHttpRequest.onreadystatechange = function() { 
-					if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200)
-						aCallback(anHttpRequest.responseText);
-				}
-
-				anHttpRequest.open( "GET", aUrl, true );            
-				anHttpRequest.send( null );
-			}
-		}
-
 		L.mapbox.accessToken = 'pk.eyJ1IjoibWF0dGhld2dhbGwiLCJhIjoiY2lobTFpZnB1MDBlMHVza3FqNDcxcWJuOCJ9.ZXH7wvxQNQxOneG5vT_znA';
 		var map = L.mapbox.map('map', 'mapbox.streets')
 			.setView([{{lat}}, {{lon}}], 6);

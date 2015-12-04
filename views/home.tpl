@@ -12,56 +12,25 @@
 </head>
 <body>
 	<div id="map" class="dark"></div>
-	<div id="location">
-		<p id="displayName">{{display_name}}</p>
-	</div>
 	<script>
-		var HttpClient = function() {
-			this.get = function(aUrl, aCallback) {
-				var anHttpRequest = new XMLHttpRequest();
-				anHttpRequest.onreadystatechange = function() { 
-					if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200)
-						aCallback(anHttpRequest.responseText);
-				}
-
-				anHttpRequest.open( "GET", aUrl, true );            
-				anHttpRequest.send( null );
-			}
-		}
 
 		L.mapbox.accessToken = 'pk.eyJ1IjoibWF0dGhld2dhbGwiLCJhIjoiY2lobTFpZnB1MDBlMHVza3FqNDcxcWJuOCJ9.ZXH7wvxQNQxOneG5vT_znA';
 		var map = L.mapbox.map('map', 'mapbox.streets')
 			.setView([{{lat}}, {{lon}}], 14);
 
-		var marker = L.marker([{{lat}}, {{lon}}], {
-			icon: L.mapbox.marker.icon({
-				'marker-size': 'large',
-				'marker-color': '#151515'
-			})
-		});
-
-		requests = new HttpClient();
+		var featureLayer = L.mapbox.featureLayer()
+			.loadURL('/api')
+			.addTo(map);
 
 		window.setInterval(function() {
 
-			requests.get('/api', function(response) {
+			map.removeLayer(featureLayer)
 
-				obj = JSON.parse(response);
-
-				marker.setLatLng(
-					L.latLng(
-						obj.lat,
-						obj.lon
-					)
-				);
-
-				var container = document.getElementById('displayName');
-				container.innerHTML = obj.displayname;
-			});
+			featureLayer = L.mapbox.featureLayer()
+				.loadURL('/api')
+				.addTo(map);
 
 		}, 60000);
-
-		marker.addTo(map);
 	</script>
 </body>
 </html>

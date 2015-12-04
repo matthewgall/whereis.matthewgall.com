@@ -149,7 +149,7 @@ def api_history_json():
 
 	body = {
 		"type": "FeatureCollection",
-		"features": [],
+		"features": []
 	}
 
 	for location in row:
@@ -216,12 +216,25 @@ def api_data():
 
 	# And return this data, and all lookups to the script
 	response.content_type = 'application/json'
-	return json.dumps(dict(
-		displayname=row['display_name'],
-		lat=row['latitude'],
-		lon=row['longitude'],
-		timestamp=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
+
+	body = {
+		"type": "FeatureCollection",
+		"features": [],
+	}
+
+	body['features'].append(dict(
+		type="Feature",
+		geometry=dict(
+			type="Point",
+			coordinates=[float(row['longitude']),float(row['latitude'])]
+		),
+		properties=dict(
+			title=row['display_name'],
+			description="<strong>Last seen at: </strong>" + datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
+		)
 	))
+
+	return json.dumps(body)
 
 @route('/')
 @view('home')
