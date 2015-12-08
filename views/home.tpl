@@ -23,13 +23,7 @@
 			.addTo(map);
 
 		window.setInterval(function() {
-
-			map.removeLayer(featureLayer)
-
-			featureLayer = L.mapbox.featureLayer()
-				.loadURL('/api')
-				.addTo(map);
-
+			featureLayer.loadURL('/api')
 		}, 60000);
 	</script>
 </body>
