@@ -1,13 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-15 -*-
 
-import os
-import json
-import socket
-import logging
-import time
-import psycopg2
-import psycopg2.extras
+import os, json, logging, time
+import psycopg2, psycopg2.extras
 import requests
 from datetime import datetime
 from urlparse import urlparse
@@ -20,7 +15,13 @@ def css_static(filename):
 	return static_file(filename, root='public/css')
 
 @route('favicon.ico')
-@error(404)
+@error('404')
+@error('403')
+def returnError(code, msg, contentType="text/plain"):
+    response.status = int(code)
+    response.content_type = contentType
+    return msg
+
 def error_404(error):
 	response.status = 404
 	response.content_type = 'text/plain'
@@ -62,7 +63,7 @@ def process_data():
 		# that we haven't been here before
 		try:
 			cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-			cur.execute('SELECT latitude,longitude FROM "checkins" ORDER BY id DESC')
+			cur.execute('SELECT latitude, longitude FROM "checkins" ORDER BY id DESC')
 			row = cur.fetchone()
 			cur.close()
 		except:
@@ -121,7 +122,7 @@ def api_history():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT latitude,longitude FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT latitude, longitude FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
 	except Exception as e:
@@ -140,7 +141,7 @@ def api_history_json():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT * FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT * FROM "checkins" ORDER BY id DESC LIMIT 500')
 		row = cur.fetchall()
 		cur.close()
 	except Exception as e:
@@ -207,7 +208,7 @@ def api_data():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT latitude,longitude,display_name,timestamp FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT latitude, longitude, display_name, timestamp FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
 	except Exception as e:
@@ -243,7 +244,7 @@ def load_data():
 	# First, we'll perform the select of the latest checkin
 	try:
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT latitude,longitude,display_name,timestamp FROM "checkins" ORDER BY id DESC')
+		cur.execute('SELECT latitude, longitude, display_name, timestamp FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
 	except Exception as e:
@@ -262,8 +263,8 @@ if __name__ == '__main__':
 
 	app = default_app()
 
-	serverHost = os.getenv('SERVER_HOST', 'localhost')
-	serverPort = os.getenv('SERVER_PORT', '5000')
+	serverHost = os.getenv('IP', 'localhost')
+	serverPort = os.getenv('PORT', '5000')
 
 	if not os.getenv('DATABASE_URL', '') == '':
 		connectString = urlparse(os.getenv('DATABASE_URL', ''))
@@ -289,7 +290,6 @@ if __name__ == '__main__':
 			host=postgresHost,
 			port=postgresPort
 		)
-		log.info("Successfully connected to postgreSQL server at " + postgresHost)
 	except:
 		log.error("Unable to connect to postgreSQL server")
 		exit(1)
@@ -299,7 +299,6 @@ if __name__ == '__main__':
 
 	# Now we're ready, so start the server
 	try:
-		log.info("Successfully started application server on " + socket.gethostname())
-		app.run(host=serverHost, port=serverPort)
+		app.run(host=serverHost, port=serverPort, server='cherrypy')
 	except:
-		log.info("Failed to start application server on " + socket.gethostname())
+		log.error("Failed to start application server")
