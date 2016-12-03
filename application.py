@@ -14,7 +14,6 @@ from LatLon import LatLon
 def css_static(filename):
 	return static_file(filename, root='public/css')
 
-@route('favicon.ico')
 @error('404')
 @error('403')
 def returnError(code, msg, contentType="text/plain"):
@@ -22,7 +21,8 @@ def returnError(code, msg, contentType="text/plain"):
     response.content_type = contentType
     return msg
 
-def error_404(error):
+@route('/favicon.ico')
+def error_404():
 	response.status = 404
 	response.content_type = 'text/plain'
 	return 'Nothing here, sorry'
@@ -247,17 +247,22 @@ def load_data():
 		cur.execute('SELECT latitude, longitude, display_name, timestamp FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
+
+		if row is None:
+			dict(
+				qty=0
+			)
+		else:
+			# And return this data, and all lookups to the script
+			return dict(
+				display_name=row['display_name'],
+				lat=row['latitude'],
+				lon=row['longitude'],
+				timestamp=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
+			)
 	except Exception as e:
 		conn.rollback()
 		pass
-
-	# And return this data, and all lookups to the script
-	return dict(
-		display_name=row['display_name'],
-		lat=row['latitude'],
-		lon=row['longitude'],
-		timestamp=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
-	)
 
 if __name__ == '__main__':
 

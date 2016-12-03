@@ -12,3 +12,6 @@ pip-selfcheck.json
 
 ## cloud9 ##
 local/
+
+## app ##
+cherrypy/

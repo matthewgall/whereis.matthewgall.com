@@ -13,11 +13,9 @@
 <body>
 	<div id="map" class="dark"></div>
 	<script>
-
 		L.mapbox.accessToken = 'pk.eyJ1IjoibWF0dGhld2dhbGwiLCJhIjoiQmhiMlNDdyJ9.V-0y6h1GnVcVZAMrdJRYcg';
 		var map = L.mapbox.map('map')
 			.setView([{{lat}}, {{lon}}], 14);
-
 		L.mapbox.styleLayer('mapbox://styles/mapbox/dark-v9').addTo(map);
 		
 		var featureLayer = L.mapbox.featureLayer()
