@@ -13,9 +13,14 @@
 <body>
 	<div id="map" class="dark"></div>
 	<script>
+
 		L.mapbox.accessToken = 'pk.eyJ1IjoibWF0dGhld2dhbGwiLCJhIjoiQmhiMlNDdyJ9.V-0y6h1GnVcVZAMrdJRYcg';
 		var map = L.mapbox.map('map')
-			.setView([{{lat}}, {{lon}}], 14);
+			% if lat != '':
+				.setView([{{lat}}, {{lon}}], 14);
+			% else:
+				.setView([51.507351, -0.127758], 14)
+			% end
 		L.mapbox.styleLayer('mapbox://styles/mapbox/dark-v9').addTo(map);
 		
 		var featureLayer = L.mapbox.featureLayer()

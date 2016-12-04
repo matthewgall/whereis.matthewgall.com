@@ -9,6 +9,7 @@ from urlparse import urlparse
 from bottle import route, request, response, error, default_app, view, static_file
 from logentries import LogentriesHandler
 from LatLon import LatLon
+from modules import Nominatim
 
 @route('/public/css/<filename>')
 def css_static(filename):
@@ -34,75 +35,51 @@ def process_data():
 	if not request.forms.get('token') == os.getenv('APP_TOKEN', 'testtoken'):
 		response.status = 403
 		response.content_type = 'text/plain'
-		log.info("Invalid token provided: " + request.forms.get('token'))
-		return 'Forbidden'
+		log.info("Invalid token provided: {}".format(request.forms.get('token')))
+		return "Invalid token provided: {}".format(request.forms.get('token'))
 
 	# Now the token is verified, we'll be gathering other data
 	try:
 		lat, lon = request.forms.get('location').split(',')
 		deviceID = request.forms.get('device')
 
-		# At a minimum, the app needs the latitude and longitude
-		if not (lat or lon):
-			raise ValueError
-
-		# Latitude measures how far north or south of the equator a place is located. 
-		# The equator is situated at 0°, the North Pole at 90° north (or 90°, because a positive 
-		# latitude implies north), and the South Pole at 90° south (or -90°). Latitude measurements
-		# range from 0° to (+/–)90°.
-		if not (float(lat) <= -90) and (float(lat) >= 90):
-			raise ValueError
-
-		# Longitude measures how far east or west of the prime meridian a place is located.
-		# The prime meridian runs through Greenwich, England. Longitude measurements range from 0° 
-		# to (+/–)180°.
-		if not (float(lon) <= -180) and (float(lon) >= 180):
-			raise ValueError
-
-		# Once all this checks out, we can move to do some data insertion, first, we'll double check
-		# that we haven't been here before
 		try:
+			locationData = Nominatim()
+			locationData = locationData.reverse(lat, lon)
+
+			# Get the last check-in
 			cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 			cur.execute('SELECT latitude, longitude FROM "checkins" ORDER BY id DESC')
 			row = cur.fetchone()
 			cur.close()
-		except:
-			conn.rollback()
-			raise SystemError
 
-		oldLocation = LatLon(row['latitude'],row['longitude'])
-		newLocation = LatLon(lat, lon)
-		distance = newLocation.distance(oldLocation)
+			# If we have moved more than 100m, then we'll accept the check-in
+			distance = LatLon(lat, lon).distance(LatLon(row['latitude'],row['longitude']))
+			if distance < 0.1:
+				message = "Not updating as latitude and longitude have not been modified by more than 100m: {}, {}".format(lat, lon)
+				log.info(message)
+				return message
 
-		# If we have moved more than 200m, then we'll accept the movement
-		if distance < 0.1:
-			log.info("Not updating as latitude and longitude have not been modified by more than 100m: " + lat + "," + lon)
-			return "Updated lat/lon is less than 100m away from previous checkin, ignoring"
-
-		# Next, we'll do a display name lookup (to save the Nominatium API)
-		payload = {
-			'format': 'json',
-			'lat': lat,
-			'lon': lon,
-			'zoom': 16,
-			'addressdetails': 1
-		}
-		locationData = requests.get('http://nominatim.openstreetmap.org/reverse', params=payload)
-		locationData = locationData.json()
-
-		## Finally, we can process the insertion
-		try:
+			# Insert the requisite check-in record
 			cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 			cur.execute(
 				'INSERT INTO "checkins" (latitude, longitude, display_name, timestamp) VALUES (%s, %s, %s, %s)',
 				(lat, lon, locationData['display_name'], int(time.time()))
 			)
-			log.info("Updated location to: " + lat + "," + lon)
+			log.info("Updated location to: {}, {}".format(lat, lon))
 			conn.commit()
-		except Exception as e:
-			conn.rollback()
-			raise SystemError
+			cur.close()
 
+		except ValueError:
+			# Something was wrong with the latitude or logitude (probably invalid data)
+			message = "You provided invalid data: {}, {}".format(lat, lon)
+			log.info(message)
+			return message
+		except:
+			conn.rollback()
+			message = "We encountered a system error performing your request. Please try again later"
+			log.error(message)
+			return message
 		return "ok"
 
 	except ValueError:
@@ -110,30 +87,25 @@ def process_data():
 		response.content_type = 'text/plain'
 		return 'Bad request'
 
-	except SystemError:
-		response.status = 503
-		response.content_type = 'text/plain'
-		return 'Server error'
-
 @route('/history')
 @view('history.tpl')
 def api_history():
-
-	# First, we'll perform the select of the latest checkin
 	try:
+		# Get our last check-in to frame the map correctly
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 		cur.execute('SELECT latitude, longitude FROM "checkins" ORDER BY id DESC')
 		row = cur.fetchone()
 		cur.close()
+
+		# And return a dictionary to display the view, a later AJAX call will complete it
+		return dict(
+			display_name="History",
+			lat=row['latitude'],
+			lon=row['longitude']
+		)
 	except Exception as e:
 		conn.rollback()
 		pass
-
-	return dict(
-		display_name="History",
-		lat=row['latitude'],
-		lon=row['longitude']
-	)
 
 @route('/history.json')
 def api_history_json():
@@ -159,15 +131,8 @@ def api_history_json():
 		if location['display_name'] is None:
 
 			# Perform the lookup
-			payload = {
-				'format': 'json',
-				'lat': location['latitude'],
-				'lon': location['longitude'],
-				'zoom': 16,
-				'addressdetails': 1
-			}
-			locationData = requests.get('http://nominatim.openstreetmap.org/reverse', params=payload)
-			locationData = locationData.json()
+			locationData = Nominatim()
+			locationData = locationData.reverse(lat, lon)
 
 			# Now, we have the data, so we'll update the lookup
 			try:
@@ -194,7 +159,7 @@ def api_history_json():
 			),
 			properties=dict(
 				title=display_name,
-				description="<strong>Last seen at: </strong>" + datetime.fromtimestamp(location['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
+				description="<strong>Last seen at: </strong> {}".format(datetime.fromtimestamp(location['timestamp']).strftime('%d/%m/%Y %H:%M:%S'))
 			)
 		))
 
@@ -231,7 +196,7 @@ def api_data():
 		),
 		properties=dict(
 			title=row['display_name'],
-			description="<strong>Last seen at: </strong>" + datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
+			description="<strong>Last seen at: </strong> {}".format(datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S'))
 		)
 	))
 
@@ -249,8 +214,9 @@ def load_data():
 		cur.close()
 
 		if row is None:
-			dict(
-				qty=0
+			return dict(
+				lat='',
+				lon=''
 			)
 		else:
 			# And return this data, and all lookups to the script
