@@ -4,3 +4,4 @@ psycopg2
 logentries
 LatLon
 cherrypy
+python-dateutil

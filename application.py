@@ -5,15 +5,16 @@ import os, json, logging, time
 import psycopg2, psycopg2.extras
 import requests
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from urlparse import urlparse
 from bottle import route, request, response, error, default_app, view, static_file
 from logentries import LogentriesHandler
 from LatLon import LatLon
 from modules import Nominatim
 
-@route('/public/css/<filename>')
+@route('/static/<filename>')
 def css_static(filename):
-	return static_file(filename, root='public/css')
+	return static_file(filename, root='static')
 
 @error('404')
 @error('403')
@@ -115,9 +116,14 @@ def home():
 		row = cur.fetchone()
 		cur.close()
 
+		attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
+		human_readable = lambda delta: ['%d %s' % (getattr(delta, attr), getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]
+		timeSince = human_readable(relativedelta(datetime.now(), datetime.fromtimestamp(row['timestamp'])))
+
 		# And return this data, and all lookups to the script
 		return dict(
 			name=row['display_name'],
+			timeSince="({} ago)".format(', '.join(timeSince)),
 			time=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
 		)
 	except Exception as e:
