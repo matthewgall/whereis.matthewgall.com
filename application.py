@@ -74,18 +74,11 @@ def error_404():
 	return 'Nothing here, sorry'
 
 @route('/submit', method='POST')
+@auth_basic(check)
 def submitPOST():
 	try:
-		# First, we'll verify the token provided in the request
-		if not request.forms.get('token') == os.getenv('APP_TOKEN', 'testtoken'):
-			response.status = 403
-			response.content_type = 'text/plain'
-			log.info("Invalid token provided: {}".format(request.forms.get('token')))
-			return "Invalid token provided: {}".format(request.forms.get('token'))
-
 		lat, lon = request.forms.get('location').split(',')
 		deviceID = request.forms.get('device')
-
 		if submit(lat, lon, deviceID):
 			return "ok"
 		return "error"
