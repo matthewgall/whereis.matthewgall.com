@@ -100,7 +100,7 @@ def submitOwnTracks():
 	try:
 		postdata = json.loads(request.body.read())
 		if postdata['_type'] == "location" and submit(postdata['lat'], postdata['lon']):
-			return "ok"
+			return json.dumps({})
 		return "error"
 	except:
 		response.status = 400
