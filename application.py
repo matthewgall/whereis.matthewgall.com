@@ -7,10 +7,54 @@ import requests
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from urlparse import urlparse
-from bottle import route, request, response, error, default_app, view, static_file
+from bottle import auth_basic, route, request, response, error, default_app, view, static_file
 from logentries import LogentriesHandler
 from LatLon import LatLon
 from modules import Nominatim
+
+def check(user, token):
+	if user == os.getenv('APP_USER', 'update') and token == os.getenv('APP_TOKEN', 'testtoken'):
+		return True
+	return False
+
+def submit(lat, lon, deviceID=''):
+	try:
+		locationData = Nominatim()
+		locationData = locationData.reverse(lat, lon, 11)
+
+		# Get the last check-in
+		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+		cur.execute('SELECT latitude, longitude FROM "checkins" ORDER BY id DESC')
+		row = cur.fetchone()
+		cur.close()
+
+		# If we have moved more than 100m, then we'll accept the check-in
+		try:
+			distance = LatLon(lat, lon).distance(LatLon(row['latitude'],row['longitude']))
+			if distance < 0.1:
+				message = "Not updating as latitude and longitude have not been modified by more than 100m: {}, {}".format(lat, lon)
+				log.info(message)
+				return message
+		except TypeError:
+			pass
+
+		# Insert the requisite check-in record
+		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+		cur.execute(
+			'INSERT INTO "checkins" (latitude, longitude, display_name, timestamp) VALUES (%s, %s, %s, %s)',
+			(lat, lon, locationData['display_name'], int(time.time()))
+		)
+		log.info("Updated location to: {}, {}".format(lat, lon))
+		conn.commit()
+		cur.close()
+
+	except ValueError:
+		# Something was wrong with the latitude or logitude (probably invalid data)
+		message = "You provided invalid data: {}, {}".format(lat, lon)
+		log.info(message)
+		return message
+
+	return True
 
 @route('/static/<filename>')
 def css_static(filename):
@@ -30,58 +74,35 @@ def error_404():
 	return 'Nothing here, sorry'
 
 @route('/submit', method='POST')
-def submit():
-
-	# First, we'll verify the token provided in the request
-	if not request.forms.get('token') == os.getenv('APP_TOKEN', 'testtoken'):
-		response.status = 403
-		response.content_type = 'text/plain'
-		log.info("Invalid token provided: {}".format(request.forms.get('token')))
-		return "Invalid token provided: {}".format(request.forms.get('token'))
-
-	# Now the token is verified, we'll be gathering other data
+def submitPOST():
 	try:
+		# First, we'll verify the token provided in the request
+		if not request.forms.get('token') == os.getenv('APP_TOKEN', 'testtoken'):
+			response.status = 403
+			response.content_type = 'text/plain'
+			log.info("Invalid token provided: {}".format(request.forms.get('token')))
+			return "Invalid token provided: {}".format(request.forms.get('token'))
+
 		lat, lon = request.forms.get('location').split(',')
 		deviceID = request.forms.get('device')
 
-		try:
-			locationData = Nominatim()
-			locationData = locationData.reverse(lat, lon, 11)
-
-			# Get the last check-in
-			cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-			cur.execute('SELECT latitude, longitude FROM "checkins" ORDER BY id DESC')
-			row = cur.fetchone()
-			cur.close()
-
-			# If we have moved more than 100m, then we'll accept the check-in
-			try:
-				distance = LatLon(lat, lon).distance(LatLon(row['latitude'],row['longitude']))
-				if distance < 0.1:
-					message = "Not updating as latitude and longitude have not been modified by more than 100m: {}, {}".format(lat, lon)
-					log.info(message)
-					return message
-			except TypeError:
-				pass
-
-			# Insert the requisite check-in record
-			cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-			cur.execute(
-				'INSERT INTO "checkins" (latitude, longitude, display_name, timestamp) VALUES (%s, %s, %s, %s)',
-				(lat, lon, locationData['display_name'], int(time.time()))
-			)
-			log.info("Updated location to: {}, {}".format(lat, lon))
-			conn.commit()
-			cur.close()
-
-		except ValueError:
-			# Something was wrong with the latitude or logitude (probably invalid data)
-			message = "You provided invalid data: {}, {}".format(lat, lon)
-			log.info(message)
-			return message
-		return "ok"
-
+		if submit(lat, lon, deviceID):
+			return "ok"
+		return "error"
 	except ValueError:
+		response.status = 400
+		response.content_type = 'text/plain'
+		return 'Bad request'
+
+@route('/submit/owntracks', method='POST')
+@auth_basic(check)
+def submitOwnTracks():
+	try:
+		postdata = json.loads(request.body.read())
+		if postdata['_type'] == "location" and submit(postdata['lat'], postdata['lon']):
+			return "ok"
+		return "error"
+	except:
 		response.status = 400
 		response.content_type = 'text/plain'
 		return 'Bad request'
