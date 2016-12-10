@@ -4,6 +4,7 @@
 import os, json, logging, time
 import psycopg2, psycopg2.extras
 import requests
+import paho.mqtt.client as mqtt
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from urlparse import urlparse
@@ -11,6 +12,7 @@ from bottle import auth_basic, route, request, response, error, default_app, vie
 from logentries import LogentriesHandler
 from LatLon import LatLon
 from modules import Nominatim
+
 
 def check(user, token):
 	if user == os.getenv('APP_USER', 'update') and token == os.getenv('APP_TOKEN', 'testtoken'):
@@ -21,6 +23,7 @@ def submit(lat, lon, deviceID=''):
 	try:
 		locationData = Nominatim()
 		locationData = locationData.reverse(lat, lon, 11)
+		timeData = int(time.time())
 
 		# Get the last check-in
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -42,7 +45,7 @@ def submit(lat, lon, deviceID=''):
 		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 		cur.execute(
 			'INSERT INTO "checkins" (latitude, longitude, display_name, timestamp) VALUES (%s, %s, %s, %s)',
-			(lat, lon, locationData['display_name'], int(time.time()))
+			(lat, lon, locationData['display_name'], timeData)
 		)
 		log.info("Updated location to: {}, {}".format(lat, lon))
 		conn.commit()
@@ -56,6 +59,19 @@ def submit(lat, lon, deviceID=''):
 
 	return True
 
+def mqtt_connect(client, userdata, rc):
+	client.subscribe("owntracks/+/+")
+
+def mqtt_message(client, userdata, msg):
+	topic = msg.topic
+	try:
+		data = json.loads(msg.payload)
+		if data['_type'] == "location" and submit(data['lat'], data['lon'], data['tid']):
+			return True
+	except:
+		log.info("Cannot decode data on topic {0}".format(topic))
+		pass
+
 @route('/static/<filename>')
 def css_static(filename):
 	return static_file(filename, root='static')
@@ -63,9 +79,9 @@ def css_static(filename):
 @error('404')
 @error('403')
 def returnError(code, msg, contentType="text/plain"):
-    response.status = int(code)
-    response.content_type = contentType
-    return msg
+	response.status = int(code)
+	response.content_type = contentType
+	return msg
 
 @route('/favicon.ico')
 def error_404():
@@ -168,22 +184,38 @@ if __name__ == '__main__':
 
 	# Instantiate a connection
 	try:
-		conn = psycopg2.connect(
-			database=postgresDatabase,
-			user=postgresUser,
-			password=postgresPassword,
-			host=postgresHost,
-			port=postgresPort
-		)
+		if os.getenv('DATABASE_URL', '') != '':
+			log.info("Connecting to postgreSQL: {}".format(os.getenv('DATABASE_URL')))
+			conn = psycopg2.connect(
+				database=postgresDatabase,
+				user=postgresUser,
+				password=postgresPassword,
+				host=postgresHost,
+				port=postgresPort
+			)
+		else:
+			exit("DATABASE_URL is not set, or blank. Please set and restart the application")
+
+		if not os.getenv('MQTT_URL', '') == '':
+			log.info("Connecting to MQTT: {}".format(os.getenv('MQTT_URL')))
+			client = mqtt.Client()
+			client.on_connect = mqtt_connect
+			client.on_message = mqtt_message
+			client.connect(os.getenv('MQTT_URL'), 1883, 60)
 	except:
-		log.error("Unable to connect to postgreSQL server")
-		exit(1)
+		exit("DATABASE_URL is not set, or blank. Please set and restart the application")
 
 	if os.getenv('LOGENTRIES_TOKEN') == '':
 		log.addHandler(LogentriesHandler(os.getenv('LOGENTRIES_TOKEN', '')))
 
 	# Now we're ready, so start the server
 	try:
+		client.loop_start()
 		app.run(host=serverHost, port=serverPort, server='cherrypy')
+		
 	except:
 		log.error("Failed to start application server")
+	finally:
+		conn.close()
+		if os.getenv('MQTT_URL', '') == "":
+			client.loop_stop()

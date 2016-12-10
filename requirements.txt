@@ -5,3 +5,4 @@ logentries
 LatLon
 cherrypy
 python-dateutil
+paho-mqtt
