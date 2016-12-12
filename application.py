@@ -13,7 +13,6 @@ from logentries import LogentriesHandler
 from LatLon import LatLon
 from modules import Nominatim
 
-
 def check(user, token):
 	if user == os.getenv('APP_USER', 'update') and token == os.getenv('APP_TOKEN', 'testtoken'):
 		return True
@@ -22,7 +21,7 @@ def check(user, token):
 def submit(lat, lon, deviceID=''):
 	try:
 		locationData = Nominatim()
-		locationData = locationData.reverse(lat, lon, 11)
+		locationData = locationData.reverse(lat, lon, 12)
 		timeData = int(time.time())
 
 		# Get the last check-in
@@ -151,8 +150,14 @@ def home():
 		timeSince = human_readable(relativedelta(datetime.now(), datetime.fromtimestamp(row['timestamp'])))
 
 		# And return this data, and all lookups to the script
+		if request.query.get("accuracy", ''):
+			locationData = Nominatim()
+			display_name = locationData.reverse(row['latitude'], row['longitude'], request.query.get("accuracy"))['display_name']
+		else:
+			display_name = row['display_name']
+
 		return dict(
-			name=row['display_name'],
+			name=display_name,
 			timeSince="({} ago)".format(', '.join(timeSince)),
 			time=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
 		)
