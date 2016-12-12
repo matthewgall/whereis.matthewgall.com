@@ -150,7 +150,7 @@ def home():
 		timeSince = human_readable(relativedelta(datetime.now(), datetime.fromtimestamp(row['timestamp'])))
 
 		# And return this data, and all lookups to the script
-		if request.query.get("accuracy", ''):
+		if request.query.get("accuracy", '') != '' and request.query.get('token', '') == os.getenv('APP_TOKEN', 'testtoken'):
 			locationData = Nominatim()
 			display_name = locationData.reverse(row['latitude'], row['longitude'], request.query.get("accuracy"))['display_name']
 		else:
