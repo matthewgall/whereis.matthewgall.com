@@ -59,7 +59,7 @@ def submit(lat, lon, deviceID=''):
 	return True
 
 def mqtt_connect(client, userdata, rc):
-	client.subscribe("owntracks/+/+")
+	client.subscribe(os.getenv("MQTT_TOPIC", "owntracks/+/+"))
 
 def mqtt_message(client, userdata, msg):
 	topic = msg.topic
