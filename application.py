@@ -3,7 +3,7 @@
 
 import os, json, logging, time
 import psycopg2, psycopg2.extras
-import requests
+import requests, simplekml
 import paho.mqtt.client as mqtt
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -115,6 +115,25 @@ def submitOwnTracks():
 		response.content_type = 'text/plain'
 		return 'Bad request'
 
+@route('/history.kml')
+@auth_basic(check)
+def historyKML():
+	kml = simplekml.Kml()
+	kml.document.name = "History"
+
+	try:
+		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+		cur.execute('SELECT latitude, longitude, display_name, timestamp FROM "checkins" ORDER BY id DESC')
+		rows = cur.fetchone()
+		cur.close()
+
+		for loc in rows:
+			kml.newpoint(name=loc['display_name'], coords=[(loc['latitude'],loc['longitude'])])
+
+		return kml.kml()
+	except:
+		return "Unable to generate KML"
+
 @route('/api')
 @view('api')
 def api():
@@ -179,7 +198,7 @@ if __name__ == '__main__':
 		postgresUser = os.getenv('POSTGRES_USER', connectString.username)
 		postgresPassword = os.getenv('POSTGRES_PASS', connectString.password)
 		postgresDatabase = os.getenv('POSTGRES_DB', connectString.path[1:])
-	
+
 	# Now we're ready, so start the server
 	# Instantiate the logger
 	log = logging.getLogger('log')
@@ -217,7 +236,7 @@ if __name__ == '__main__':
 	try:
 		client.loop_start()
 		app.run(host=serverHost, port=serverPort, server='cherrypy')
-		
+
 	except:
 		log.error("Failed to start application server")
 	finally:
