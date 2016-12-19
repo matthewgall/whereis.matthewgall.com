@@ -121,18 +121,15 @@ def historyKML():
 	kml = simplekml.Kml()
 	kml.document.name = "History"
 
-	try:
-		cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-		cur.execute('SELECT latitude, longitude, display_name, timestamp FROM "checkins" ORDER BY id DESC')
-		rows = cur.fetchone()
-		cur.close()
+	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+	cur.execute('SELECT latitude, longitude, display_name, timestamp FROM "checkins" ORDER BY id DESC')
+	
+	for loc in cur:
+		kml.newpoint(name=loc['display_name'], description=datetime.fromtimestamp(loc['timestamp']).strftime('%d/%m/%Y %H:%M:%S'), coords=[(loc['longitude'],loc['latitude'])])
 
-		for loc in rows:
-			kml.newpoint(name=loc['display_name'], coords=[(loc['latitude'],loc['longitude'])])
-
-		return kml.kml()
-	except:
-		return "Unable to generate KML"
+	cur.close()
+	response.content_type = 'application/json'
+	return kml.kml()
 
 @route('/api')
 @view('api')
