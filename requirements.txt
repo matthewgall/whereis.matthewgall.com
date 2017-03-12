@@ -3,7 +3,7 @@ requests
 psycopg2
 logentries
 LatLon
-cherrypy
+tornado
 python-dateutil
 paho-mqtt
 simplekml

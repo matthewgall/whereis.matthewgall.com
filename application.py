@@ -203,6 +203,9 @@ if __name__ == '__main__':
 	log.setLevel(logging.INFO)
 	log.addHandler(console)
 
+	if os.getenv('LOGENTRIES_TOKEN') == '':
+		log.addHandler(LogentriesHandler(os.getenv('LOGENTRIES_TOKEN', '')))
+
 	# Instantiate a connection
 	try:
 		if os.getenv('DATABASE_URL', '') != '':
@@ -215,8 +218,13 @@ if __name__ == '__main__':
 				port=postgresPort
 			)
 		else:
-			exit("DATABASE_URL is not set, or blank. Please set and restart the application")
-
+			log.error("DATABASE_URL is not set, or blank. Please set and restart the application")
+			exit()
+	except:
+		log.error("We were unable to connect to the database. Please check and restart the application")
+		exit()
+	
+	try:
 		if not os.getenv('MQTT_URL', '') == '':
 			log.info("Connecting to MQTT: {}".format(os.getenv('MQTT_URL')))
 			client = mqtt.Client()
@@ -225,15 +233,13 @@ if __name__ == '__main__':
 			client.connect(os.getenv('MQTT_URL'), 1883, 60)
 			client.loop_start()
 	except:
-		exit("DATABASE_URL is not set, or blank. Please set and restart the application")
-
-	if os.getenv('LOGENTRIES_TOKEN') == '':
-		log.addHandler(LogentriesHandler(os.getenv('LOGENTRIES_TOKEN', '')))
+		log.info("We were unable to connect to MQTT, but this isn't a requirement. If it is, double check and restart the application")
+		pass
 
 	# Now we're ready, so start the server
 	try:
-		app.run(host=serverHost, port=serverPort, server='cherrypy')
+		app.run(host=serverHost, port=serverPort, server='tornado')
 	except:
-		log.error("Failed to start application server")
+		log.error("We encountered an error starting the web server, is something running on the same port?")
 	finally:
 		conn.close()
