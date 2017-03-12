@@ -223,6 +223,7 @@ if __name__ == '__main__':
 			client.on_connect = mqtt_connect
 			client.on_message = mqtt_message
 			client.connect(os.getenv('MQTT_URL'), 1883, 60)
+			client.loop_start()
 	except:
 		exit("DATABASE_URL is not set, or blank. Please set and restart the application")
 
@@ -231,9 +232,7 @@ if __name__ == '__main__':
 
 	# Now we're ready, so start the server
 	try:
-		client.loop_start()
 		app.run(host=serverHost, port=serverPort, server='cherrypy')
-
 	except:
 		log.error("Failed to start application server")
 	finally:
