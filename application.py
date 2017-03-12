@@ -237,8 +237,3 @@ if __name__ == '__main__':
 		log.error("Failed to start application server")
 	finally:
 		conn.close()
-		try:
-			if not os.getenv('MQTT_URL', '') == '':
-				client.loop_stop()
-		except:
-			pass
