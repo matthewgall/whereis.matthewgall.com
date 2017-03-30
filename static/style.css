@@ -4,14 +4,21 @@ body {
     margin: 0
 }
 h1,
-h2 {
+h2,
+h3 {
     font-size: 2rem;
     font-family: 'Helvetica Neue', Roboto, 'Liberation Sans', Arimo, Calibri, Helvetica, Arial, sans-serif;
     font-weight: 300;
     text-align: center;
 }
 h2 {
-    font-size: 1rem
+    font-size: 1.5rem;
+    margin-bottom: 0;
+}
+h3 {
+    padding-top: 0;
+    margin-top: 0;
+    font-size: 1rem;
 }
 body {
     display: -webkit-box;
@@ -31,4 +38,8 @@ body {
     -webkit-flex-direction: column;
     -ms-flex-direction: column;
     flex-direction: column;
+}
+a {
+    text-decoration: none;
+    color: #000;
 }

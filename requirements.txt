@@ -7,3 +7,4 @@ tornado
 python-dateutil
 paho-mqtt
 simplekml
+what3words

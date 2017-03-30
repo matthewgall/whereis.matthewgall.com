@@ -3,7 +3,7 @@
 
 import os, json, logging, time
 import psycopg2, psycopg2.extras
-import requests, simplekml
+import requests, simplekml, what3words
 import paho.mqtt.client as mqtt
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -164,20 +164,25 @@ def home():
 		attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
 		human_readable = lambda delta: ['%d %s' % (getattr(delta, attr), getattr(delta, attr) > 1 and attr or attr[:-1]) for attr in attrs if getattr(delta, attr)]
 		timeSince = human_readable(relativedelta(datetime.now(), datetime.fromtimestamp(row['timestamp'])))
-
+		
 		# And return this data, and all lookups to the script
 		if request.query.get("accuracy", '') != '' and request.query.get('token', '') == os.getenv('APP_TOKEN', 'testtoken'):
 			locationData = Nominatim()
 			display_name = locationData.reverse(row['latitude'], row['longitude'], request.query.get("accuracy"))['display_name']
 		else:
 			display_name = row['display_name']
-
+		
+		if not os.getenv('W3W_TOKEN', "") == "":
+			words = w3w.reverse(lat=row['latitude'], lng=row['longitude'])['words']
+		
 		return dict(
 			name=display_name,
 			timeSince="({} ago)".format(', '.join(timeSince)),
+			threeWords=words,
 			time=datetime.fromtimestamp(row['timestamp']).strftime('%d/%m/%Y %H:%M:%S')
 		)
 	except Exception as e:
+		print e.message
 		conn.rollback()
 		pass
 
@@ -205,6 +210,9 @@ if __name__ == '__main__':
 
 	if os.getenv('LOGENTRIES_TOKEN') == '':
 		log.addHandler(LogentriesHandler(os.getenv('LOGENTRIES_TOKEN', '')))
+
+	if not os.getenv('W3W_TOKEN', "") == "":
+		w3w = what3words.Geocoder(os.getenv('W3W_TOKEN'))
 
 	# Instantiate a connection
 	try:
