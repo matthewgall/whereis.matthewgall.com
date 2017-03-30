@@ -169,11 +169,12 @@ def home():
 		if request.query.get("accuracy", '') != '' and request.query.get('token', '') == os.getenv('APP_TOKEN', 'testtoken'):
 			locationData = Nominatim()
 			display_name = locationData.reverse(row['latitude'], row['longitude'], request.query.get("accuracy"))['display_name']
+
+			if not os.getenv('W3W_TOKEN', "") == "":
+				words = w3w.reverse(lat=row['latitude'], lng=row['longitude'])['words']
 		else:
 			display_name = row['display_name']
-		
-		if not os.getenv('W3W_TOKEN', "") == "":
-			words = w3w.reverse(lat=row['latitude'], lng=row['longitude'])['words']
+			words = ''
 		
 		return dict(
 			name=display_name,
