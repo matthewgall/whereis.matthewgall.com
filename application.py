@@ -125,10 +125,10 @@ def historyKML():
 	cur.execute('SELECT latitude, longitude, display_name, timestamp FROM "checkins" ORDER BY id DESC')
 	
 	for loc in cur:
-		kml.newpoint(name=loc['display_name'], description=datetime.fromtimestamp(loc['timestamp']).strftime('%d/%m/%Y %H:%M:%S'), coords=[(loc['longitude'],loc['latitude'])])
+		kml.newpoint(name=loc['display_name'].decode('utf-8'), description=datetime.fromtimestamp(loc['timestamp']).strftime('%d/%m/%Y %H:%M:%S'), coords=[(loc['longitude'],loc['latitude'])])
 
 	cur.close()
-	response.content_type = 'application/json'
+	response.content_type = 'application/vnd.google-earth.kml+xml'
 	return kml.kml()
 
 @route('/api')
